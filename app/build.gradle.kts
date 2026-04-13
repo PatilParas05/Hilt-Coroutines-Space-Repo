@@ -56,16 +56,27 @@ dependencies {
 
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
+    //Di hilt
     implementation("com.google.dagger:hilt-android:2.50")
     ksp("com.google.dagger:hilt-compiler:2.50")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
 
+    //Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
+    //Coil
     implementation("io.coil-kt:coil-compose:2.5.0")
     implementation("io.coil-kt:coil:2.5.0")
 
-
-
+    //Material icons
     implementation("androidx.compose.material:material-icons-extended:1.5.4")
+
+    // Unit Testing
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockk)
+    testImplementation(libs.turbine)
+
+    // If you want to test Hilt injection in tests
+    testImplementation(libs.hilt.android.testing)
+    kspTest("com.google.dagger:hilt-compiler:2.50")
 }
