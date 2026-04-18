@@ -1,6 +1,9 @@
 package com.example.spaceexpo.presentation.detail
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,7 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,10 +31,13 @@ import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun SpaceDetailScreen(
     spaceObjectId: Int,
     viewModel: SpaceDetailViewModel = hiltViewModel(),
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     onBackClick: () -> Unit
 ) {
     val spaceObject by viewModel.spaceObject.collectAsState()
@@ -83,47 +89,54 @@ fun SpaceDetailScreen(
                             .fillMaxWidth()
                             .height(450.dp)
                     ) {
-                        // Main Image with loading and error states
-                        SubcomposeAsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(obj.imageUrl)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = obj.name,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            loading = {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(Color(0xFF1A1A1A)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator(
-                                        color = Color(0xFF00D9FF),
-                                        strokeWidth = 3.dp
-                                    )
-                                }
-                            },
-                            error = {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(Color(0xFF1A1A1A)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("🌌", fontSize = 72.sp)
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            "Image Loading Failed",
-                                            color = Color.White.copy(alpha = 0.7f),
-                                            fontSize = 14.sp
+                        with(sharedTransitionScope) {
+                            // Main Image with loading and error states
+                            SubcomposeAsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(obj.imageUrl)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = obj.name,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .sharedElement(
+                                        rememberSharedContentState(key = "image-$spaceObjectId"),
+                                        animatedVisibilityScope = animatedVisibilityScope
+                                    ),
+                                contentScale = ContentScale.Crop,
+                                loading = {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color(0xFF1A1A1A)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(
+                                            color = Color(0xFF00D9FF),
+                                            strokeWidth = 3.dp
                                         )
                                     }
+                                },
+                                error = {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color(0xFF1A1A1A)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text("🌌", fontSize = 72.sp)
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                "Image Loading Failed",
+                                                color = Color.White.copy(alpha = 0.7f),
+                                                fontSize = 14.sp
+                                            )
+                                        }
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
 
                         // Dark overlay at bottom
                         Box(
@@ -179,15 +192,15 @@ fun SpaceDetailScreen(
                     // Content Cards
                     Column(
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
-                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         // About Card
                         InfoCard(title = "✨ About") {
                             Text(
                                 text = obj.description,
-                                fontSize = 13.sp,
+                                fontSize = 14.sp,
                                 color = Color.White.copy(alpha = 0.9f),
-                                lineHeight = 5.sp
+                                lineHeight = 20.sp
                             )
                         }
 
@@ -200,7 +213,7 @@ fun SpaceDetailScreen(
                                     value = obj.distanceFromEarth
                                 )
 
-                                Divider(
+                                HorizontalDivider(
                                     color = Color.White.copy(alpha = 0.1f),
                                     thickness = 1.dp
                                 )
@@ -219,7 +232,7 @@ fun SpaceDetailScreen(
 
                         // Interesting Facts Card
                         InfoCard(title = "💫 Fascinating Facts") {
-                            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 obj.interestingFacts.forEachIndexed { index, fact ->
                                     FactItem(number = index + 1, fact = fact)
                                 }
@@ -240,7 +253,7 @@ fun SpaceDetailScreen(
                         .background(Color.Black.copy(alpha = 0.4f))
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
@@ -267,7 +280,7 @@ fun InfoCard(
         Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
             Text(
                 text = title,
-                fontSize = 15.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF00D9FF),
                 letterSpacing = 0.5.sp
@@ -291,18 +304,18 @@ fun StatItem(icon: String, label: String, value: String) {
         ) {
             Text(
                 text = icon,
-                fontSize = 15.sp
+                fontSize = 18.sp
             )
             Text(
                 text = label,
-                fontSize = 12.sp,
+                fontSize = 14.sp,
                 color = Color.White.copy(alpha = 0.7f),
                 fontWeight = FontWeight.Medium
             )
         }
         Text(
             text = value,
-            fontSize = 10.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White
         )
@@ -313,7 +326,7 @@ fun StatItem(icon: String, label: String, value: String) {
 fun FactItem(number: Int, fact: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Number Badge
         Surface(
@@ -327,7 +340,7 @@ fun FactItem(number: Int, fact: String) {
             ) {
                 Text(
                     text = number.toString(),
-                    fontSize = 12.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF00D9FF)
                 )
@@ -337,9 +350,9 @@ fun FactItem(number: Int, fact: String) {
         // Fact Text
         Text(
             text = fact,
-            fontSize = 12.sp,
+            fontSize = 14.sp,
             color = Color.White.copy(alpha = 0.9f),
-            lineHeight = 14.sp,
+            lineHeight = 20.sp,
             modifier = Modifier.weight(1f)
         )
     }

@@ -1,5 +1,8 @@
 package com.example.spaceexpo.presentation.list
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.example.spaceexpo.data.model.SpaceObject
@@ -37,9 +41,12 @@ val DarkSurface = Color(0xFF1C1C1C) // For Cards
 val MidDarkSurface = Color(0xFF2A2A2A) // For Chips/Image Placeholders
 val AccentPurple = Color(0xFF8B5CF6) // Kept the vibrant accent
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun SpaceListScreen(
     viewModel: SpaceListViewModel = hiltViewModel(),
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     onSpaceObjectClick: (Int) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -133,6 +140,8 @@ fun SpaceListScreen(
                         items(state.spaceObject) { spaceObject ->
                             SpaceObjectCard(
                                 spaceObject = spaceObject,
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
                                 onClick = { onSpaceObjectClick(spaceObject.id) }
                             )
                         }
@@ -218,9 +227,12 @@ fun FilterChipCustom(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun SpaceObjectCard(
     spaceObject: SpaceObject,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit
 ) {
     // Helper function to get a relevant emoji based on the object type
@@ -257,42 +269,49 @@ fun SpaceObjectCard(
                     // Updated placeholder background
                     .background(MidDarkSurface)
             ) {
-                SubcomposeAsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(spaceObject.imageUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = spaceObject.name,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    loading = {
-                        // Removed CircularProgressIndicator as requested. Keeping Box to reserve space.
-                        Box(
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    },
-                    error = {
-                        // FIX: Use a highly relevant, visible emoji as the fallback
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(MidDarkSurface),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = fallbackEmoji, // Display the object-specific emoji
-                                    fontSize = 48.sp // Make it large and prominent
-                                )
-                                Text(
-                                    spaceObject.type.name,
-                                    fontSize = 12.sp,
-                                    color = Color.White.copy(alpha = 0.7f)
-                                )
+                with(sharedTransitionScope) {
+                    SubcomposeAsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(spaceObject.imageUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = spaceObject.name,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .sharedElement(
+                                rememberSharedContentState(key = "image-${spaceObject.id}"),
+                                animatedVisibilityScope = animatedVisibilityScope
+                            ),
+                        contentScale = ContentScale.Crop,
+                        loading = {
+                            // Removed CircularProgressIndicator as requested. Keeping Box to reserve space.
+                            Box(
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        },
+                        error = {
+                            // FIX: Use a highly relevant, visible emoji as the fallback
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MidDarkSurface),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = fallbackEmoji, // Display the object-specific emoji
+                                        fontSize = 48.sp // Make it large and prominent
+                                    )
+                                    Text(
+                                        spaceObject.type.name,
+                                        fontSize = 12.sp,
+                                        color = Color.White.copy(alpha = 0.7f)
+                                    )
+                                }
                             }
                         }
-                    }
-                )
+                    )
+                }
 
                 // Subtle gradient overlay
                 Box(
@@ -363,6 +382,33 @@ fun SpaceObjectCard(
                     )
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun PlanetItem(
+    planet: SpaceObject,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
+    with(sharedTransitionScope) {
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)) {
+            AsyncImage(
+                model = planet.imageUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(100.dp)
+                    // This is the magic line
+                    .sharedElement(
+                        rememberSharedContentState(key = "image-${planet.id}"),
+                        animatedVisibilityScope = animatedVisibilityScope
+                    )
+            )
+            Text(text = planet.name)
         }
     }
 }

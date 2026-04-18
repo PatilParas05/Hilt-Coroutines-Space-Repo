@@ -4,15 +4,20 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.spaceexpo.presentation.detail.SpaceDetailScreen
 import com.example.spaceexpo.presentation.list.SpaceListScreen
 import dagger.hilt.android.AndroidEntryPoint
@@ -35,20 +40,36 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun SpaceApp() {
-    var selectedSpaceObjectId by remember { mutableStateOf<Int?>(null) }
+    val navController = rememberNavController()
 
-    if (selectedSpaceObjectId == null) {
-        SpaceListScreen(
-            onSpaceObjectClick = { id ->
-                selectedSpaceObjectId = id
+    SharedTransitionLayout {
+        NavHost(navController = navController, startDestination = "list") {
+            composable("list") {
+                SpaceListScreen(
+                    onSpaceObjectClick = { spaceObjectId ->
+                        navController.navigate("detail/$spaceObjectId")
+                    },
+                    animatedVisibilityScope = this@composable,
+                    sharedTransitionScope = this@SharedTransitionLayout
+                )
             }
-        )
-    } else {
-        SpaceDetailScreen(
-            spaceObjectId = selectedSpaceObjectId!!,
-            onBackClick = { selectedSpaceObjectId = null }
-        )
+            composable(
+                "detail/{spaceObjectId}",
+                arguments = listOf(navArgument("spaceObjectId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val spaceObjectId = backStackEntry.arguments?.getInt("spaceObjectId") ?: 0
+                SpaceDetailScreen(
+                    spaceObjectId = spaceObjectId,
+                    animatedVisibilityScope = this@composable,
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
     }
 }
